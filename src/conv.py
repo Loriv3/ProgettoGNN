@@ -19,7 +19,7 @@ class GINConv(MessagePassing):
         self.eps = torch.nn.Parameter(torch.Tensor([0]))
 
         self.edge_encoder = torch.nn.Linear(7, emb_dim)
-        self.att_layer = torch.nn.Linear(emb_dim, 1)
+        
 
     def forward(self, x, edge_index, edge_attr):
         edge_embedding = self.edge_encoder(edge_attr)
@@ -27,9 +27,9 @@ class GINConv(MessagePassing):
 
         return out
 
+    
     def message(self, x_j, edge_attr):
-        weight = torch.sigmoid(self.att_layer(edge_attr))  # learnable attention
-        return weight * F.relu(x_j + edge_attr)
+        return F.relu(x_j + edge_attr)
 
 
     def update(self, aggr_out):
