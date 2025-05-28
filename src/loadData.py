@@ -22,7 +22,7 @@ class GraphDataset(Dataset):
     def loadGraphs(path):
         print(f"Loading graphs from {path}...")
         print("This may take a few minutes, please wait...")
-        with gzip.open(path, "rt", encoding="utf-8") as f:
+        with open(path, "rt", encoding="utf-8") as f:
             graphs_dicts = json.load(f)
         graphs = []
         for graph_dict in tqdm(graphs_dicts, desc="Processing graphs", unit="graph"):
