@@ -1,3 +1,4 @@
+
 import torch
 from torch_geometric.nn import MessagePassing
 import torch.nn.functional as F
@@ -5,6 +6,37 @@ from torch_geometric.nn import global_mean_pool, global_add_pool
 from torch_geometric.utils import degree
 
 import math
+
+class MyGINEConv(MessagePassing):
+    def __init__(self, emb_dim):
+        super(MyGINEConv, self).__init__(aggr='add')  # somma come aggregazione
+
+        self.mlp = torch.nn.Sequential(
+            torch.nn.Linear(emb_dim, 2*emb_dim),
+            torch.nn.BatchNorm1d(2*emb_dim),
+            torch.nn.ReLU(),
+            torch.nn.Linear(2*emb_dim, emb_dim),
+        )
+        self.eps = torch.nn.Parameter(torch.zeros(1))
+
+        # Layer per codificare l'edge_attr (qui assumo 7 features come nel tuo esempio)
+        self.edge_encoder = torch.nn.Linear(7, emb_dim)
+
+    def forward(self, x, edge_index, edge_attr):
+        # edge_attr è un tensore [num_edges, 7]
+        edge_embedding = self.edge_encoder(edge_attr)  # codifica edge features
+
+        # calcolo output come MLP di (1+eps)*x + messaggi aggregati
+        out = self.mlp((1 + self.eps) * x + self.propagate(edge_index, x=x, edge_attr=edge_embedding))
+        return out
+
+    def message(self, x_j, edge_attr):
+        # Messaggio = ReLU(x_j + edge_attr)
+        return F.relu(x_j + edge_attr)
+
+    def update(self, aggr_out):
+        return aggr_out
+
 
 ### GIN convolution along the graph structure
 class GINConv(MessagePassing):
@@ -19,7 +51,6 @@ class GINConv(MessagePassing):
         self.eps = torch.nn.Parameter(torch.Tensor([0]))
 
         self.edge_encoder = torch.nn.Linear(7, emb_dim)
-        
 
     def forward(self, x, edge_index, edge_attr):
         edge_embedding = self.edge_encoder(edge_attr)
@@ -27,10 +58,8 @@ class GINConv(MessagePassing):
 
         return out
 
-    
     def message(self, x_j, edge_attr):
         return F.relu(x_j + edge_attr)
-
 
     def update(self, aggr_out):
         return aggr_out
@@ -100,6 +129,8 @@ class GNN_node(torch.nn.Module):
                 self.convs.append(GINConv(emb_dim))
             elif gnn_type == 'gcn':
                 self.convs.append(GCNConv(emb_dim))
+            elif gnn_type == 'mygin':
+                self.convs.append(MyGINEConv(emb_dim))
             else:
                 raise ValueError('Undefined GNN type called {}'.format(gnn_type))
 
