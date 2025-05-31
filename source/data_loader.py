@@ -12,7 +12,7 @@ def load_dataset(file_path: str) -> pd.DataFrame:
     db = []    
     for file in file_path.split(' '):
         x = os.path.basename(os.path.dirname(file))
-        with gzip.open(file, 'rt', encoding='utf-8') as f:
+        with open(file, 'rt', encoding='utf-8') as f:
             tmp = json.load(f)
             data = data + tmp
             db = db + [x]*len(tmp)
